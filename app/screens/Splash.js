@@ -1,5 +1,5 @@
 import React,{Component} from 'react';
-import { View,Text, KeyboardAvoidingView,Picker, Image } from 'react-native';
+import { View, ScrollView,Text, KeyboardAvoidingView,Picker, Image } from 'react-native';
 import { FormLabel, FormInput, Button, Icon } from 'react-native-elements'
 import Modal from "react-native-modal";
 import axios from 'axios';
@@ -18,16 +18,18 @@ export default class Splash extends Component{
             distancia: '',
             tempo: '',
             erro: '',
-            inputLatitudeValue: '',
-            inputLongitudeValue: '',
+            inputOrigemValue: '40.6655101,-73.89188969999998',
+            inputDestinoValue: '40.6905615,-73.9976592',
+            inputHoraSaidaValue: '1541202457',
+            inputMeioTransporteValue: 'driving',
             latitude: null,
             longitude: null,
             isVisible: false,
         }
         this._setCurrentLocation = this._setCurrentLocation.bind(this);
         this._makeGetToMatrixAPI = this._makeGetToMatrixAPI.bind(this);
-        this._handleLatitudeValue = this._handleLatitudeValue.bind(this);
-        this._handleLongitudeValue = this._handleLongitudeValue.bind(this);
+        this._handleInputOrigemValue = this._handleInputOrigemValue.bind(this);
+        this._handleInputDestinoValue = this._handleInputDestinoValue.bind(this);
         this._showModal = this._showModal.bind(this);
         this._hiddenModal = this._hiddenModal.bind(this);
     }
@@ -36,13 +38,23 @@ export default class Splash extends Component{
         this._setCurrentLocation();
     }
 
-    _handleLatitudeValue = (e) => {
-        this.setState({inputLatitudeValue:e});
+    _handleInputOrigemValue = (e) => {
+        this.setState({inputOrigemValue:e});
     }
 
-    _handleLongitudeValue = (e) => {
-        this.setState({inputLongitudeValue:e});
+    _handleInputDestinoValue = (e) => {
+        this.setState({inputDestinoValue:e});
     }
+
+
+    _handleinputHoraSaidaValue = (e) => {
+        this.setState({inputHoraSaidaValue:e});
+    }
+
+    _handleinputMeioTransporteValue = (e) => {
+        this.setState({inputMeioTransporteValue:e});
+    }
+
 
     _setCurrentLocation = () => {
         navigator.geolocation.getCurrentPosition(
@@ -67,9 +79,15 @@ export default class Splash extends Component{
 
 
     _makeGetToMatrixAPI = () => {
-        const {latitude,longitude,inputLatitudeValue, inputLongitudeValue} = this.state;
-        const uri = 'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=40.6655101,-73.89188969999998&destinations=40.6905615%2C-73.9976592&key=AIzaSyBFuewXNO2PKsVBRj6KFapeSU9XUc8ARg0';
-            //      `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${latitude},${longitude}&destinations=${inputLatitudeValue},${inputLongitudeValue}&key=AIzaSyC4B7FfR6nV1P2YDuqvuyxWyspxUCtuem8`;
+         const {inputOrigemValue, inputDestinoValue, inputHoraSaidaValue, inputMeioTransporteValue, erro, latitude,longitude} = this.state;
+
+        var sTransit = '';
+        if (inputMeioTransporteValue == 'transit') {
+            sTransit = '&departure_time=' + inputHoraSaidaValue + '&traffic_model=best_guess'
+        }
+
+        const uri = 'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=' + inputOrigemValue + '&destinations=' + inputDestinoValue +'&mode=' + inputMeioTransporteValue + sTransit + '&key=AIzaSyBFuewXNO2PKsVBRj6KFapeSU9XUc8ARg0';
+
         axios.get(uri)
             .then( response => {
 
@@ -82,43 +100,56 @@ export default class Splash extends Component{
                 })
             })
             .catch( err => this.setState({
+                origem: '',
+                destino: '',
+                distancia: '',
+                tempo:'',
                 erro: err.toString(),
             }) )
         this._showModal();
     }
 
     render(){
+
+
         return(
-            <View>
+
+
+
+            <ScrollView>
                 <KeyboardAvoidingView
                     behavior="padding"
                     style={style.root}
                 >
+
                     <View style={{backgroundColor:'white', height:26, margin:0}}/>
                     <View style={style.container}>
-                        <View style={{flex:1, marginTop:5, alignItems:"center", justifyContent:'center'}}>
-                            <Text style={style.title}>Google Maps Distance Matrix API</Text>
-                        </View>
-                        <View style={{borderRadius:5,borderColor:'red'}}>
-                            <FormLabel >Latitude:</FormLabel>
-                            <FormInput  inputStyle={style.input}
-                                        onChangeText={this._handleLatitudeValue}
-                                        value={this.state.inputLatitudeValue}/>
 
-                            <FormLabel >Longitude:</FormLabel>
+                        <View style={{borderRadius:5,borderColor:'red'}}>
+                            <FormLabel >Origem(lat,long):</FormLabel>
                             <FormInput  inputStyle={style.input}
-                                        onChangeText={this._handleLongitudeValue}
-                                        value={this.state.inputLongitudeValue}/>
+                                        onChangeText={this._handleInputOrigemValue}
+                                        value={this.state.inputOrigemValue}
+                            />
+
+                            <FormLabel >Destino(lat,long):</FormLabel>
+                            <FormInput  inputStyle={style.input}
+                                        onChangeText={this._handleInputDestinoValue}
+                                        value={this.state.inputDestinoValue}/>
 
                             <FormLabel >Meio de Transporte:</FormLabel>
-                            <Picker>
-                                <Picker.Item label = "Carro" value = "carro" />
-                                <Picker.Item label = "Onibus" value = "onibus" />
-                                <Picker.Item label = "Á Pé" value = "ape" />
+                            <Picker selectedValue ={this.state.inputMeioTransporteValue}
+                                    onValueChange ={this._handleinputMeioTransporteValue}>
+                                <Picker.Item label = "bicycling" value = "bicycling" />
+                                <Picker.Item label = "driving" value = "driving" />
+                                <Picker.Item label = "transit" value = "transit" />
+                                <Picker.Item label = "walking" value = "walking" />
                             </Picker>
 
                             <FormLabel >Hora de Partida:</FormLabel>
-                            <FormInput  inputStyle={style.input}/>
+                            <FormInput  inputStyle={style.input}
+                                        onChangeText={this._handleinputHoraSaidaValue}
+                                        value={this.state.inputHoraSaidaValue}/>
 
 
                         </View>
@@ -132,6 +163,20 @@ export default class Splash extends Component{
 
                     <Modal isVisible={this.state.isVisible} style={style.modalContainer}>
                         <View style={style.modal}>
+                            <View style={{ marginTop:5}}>
+                                <Text style={style.textModal}>{`Latitude: ${this.state.inputOrigemValue}`}</Text>
+                            </View>
+                            <View style={{ marginTop:5}}>
+                                <Text style={style.textModal}>{`Longitude: ${this.state.inputDestinoValue}`}</Text>
+                            </View>
+                            <View style={{ marginTop:5}}>
+                                <Text style={style.textModal}>{`Meio de Transporte: ${this.state.inputMeioTransporteValue}`}</Text>
+                            </View>
+                            <View style={{ marginTop:5}}>
+                                <Text style={style.textModal}>{`Hora de Partida: ${this.state.inputHoraSaidaValue}`}</Text>
+                            </View>
+
+
 
                             <View style={{ marginTop:5}}>
                                 <Text style={style.textModal}>{`Origem: ${this.state.origem}`}</Text>
@@ -145,9 +190,6 @@ export default class Splash extends Component{
                             <View style={{ marginTop:5}}>
                                 <Text style={style.textModal}>{`Tempo de Percurso: ${this.state.tempo}`}</Text>
                             </View>
-                            <View style={{ marginTop:5}}>
-                                <Text style={style.textModal}>{`${this.state.erro}`}</Text>
-                            </View>
 
                             <View style={style.buttonContainer}>
                                 <Button
@@ -158,8 +200,9 @@ export default class Splash extends Component{
                         </View>
                     </Modal>
 
+
                 </KeyboardAvoidingView>
-            </View>
+    </ScrollView>
         );
     }
 }
@@ -200,7 +243,7 @@ const style = {
     },
     textModal: {
         textAlign: 'center',
-        fontSize: 20,
+        fontSize: 14,
         marginHorizontal:16,
         marginTop: 16,
     },
